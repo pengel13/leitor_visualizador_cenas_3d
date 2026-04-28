@@ -137,37 +137,54 @@ scene.addObject(std::move(obj));
 
 ## 🎮 Controles
 
-Câmera
-Tecla / Entrada	Ação
-W A S D	Mover frente / esquerda / trás / direita
-Space	Subir câmera
-C	Descer câmera
-Mouse	Olhar (yaw/pitch)
-Scroll	Zoom (altera FOV)
-P	Alternar Perspectiva ↔ Ortográfica
-Escape	Liberar cursor do mouse
-Clique esquerdo	Recapturar cursor
-Seleção de Objetos
-Tecla	Ação
-TAB	Selecionar próximo objeto
-SHIFT + TAB	Selecionar objeto anterior
-Transformações (objeto selecionado)
-Tecla(s)	Modo	Ação
-↑ ↓	Translação	Mover em −Z / +Z
-← →	Translação	Mover em −X / +X
-Page Up / Page Down	Translação	Mover em +Y / −Y
-R + ↑ ↓	Rotação	Rotacionar em torno do eixo X
-R + ← →	Rotação	Rotacionar em torno do eixo Y
-R + , .	Rotação	Rotacionar em torno do eixo Z
-= ou +	Escala	Aumentar escala uniforme
--	Escala	Diminuir escala uniforme
-Backspace	Transformação	Resetar para identidade
-Modos de Renderização
-Tecla	Ação
-F	Alternar wireframe sobreposto
-G	Alternar grid de chão
-H	Alternar eixos XYZ
-L	Imprimir estado da cena no console
+### Câmera
+
+| Tecla / Entrada | Ação                                     |
+| --------------- | ---------------------------------------- |
+| `W A S D`       | Mover frente / esquerda / trás / direita |
+| `Space`         | Subir câmera                             |
+| `C`             | Descer câmera                            |
+| `Mouse`         | Olhar (yaw/pitch)                        |
+| `Scroll`        | Zoom (altera FOV)                        |
+| `P`             | Alternar **Perspectiva ↔ Ortográfica**   |
+| `Escape`        | Liberar cursor do mouse                  |
+| Clique esquerdo | Recapturar cursor                        |
+
+---
+
+## Seleção de Objetos
+
+| Tecla         | Ação                           |
+| ------------- | ------------------------------ |
+| `TAB`         | Selecionar **próximo** objeto  |
+| `SHIFT + TAB` | Selecionar **objeto anterior** |
+
+---
+
+## Transformações (objeto selecionado)
+
+| Tecla(s)              | Modo          | Ação                              |
+| --------------------- | ------------- | --------------------------------- |
+| `↑ ↓`                 | Translação    | Mover em **−Z / +Z**              |
+| `← →`                 | Translação    | Mover em **−X / +X**              |
+| `Page Up / Page Down` | Translação    | Mover em **+Y / −Y**              |
+| `R + ↑ ↓`             | Rotação       | Rotacionar em torno do **eixo X** |
+| `R + ← →`             | Rotação       | Rotacionar em torno do **eixo Y** |
+| `R + , .`             | Rotação       | Rotacionar em torno do **eixo Z** |
+| `=` ou `+`            | Escala        | **Aumentar** escala uniforme      |
+| `-`                   | Escala        | **Diminuir** escala uniforme      |
+| `Backspace`           | Transformação | **Resetar** para identidade       |
+
+---
+
+## Modos de Renderização
+
+| Tecla | Ação                               |
+| ----- | ---------------------------------- |
+| `F`   | Alternar wireframe sobreposto      |
+| `G`   | Alternar grid de chão              |
+| `H`   | Alternar eixos XYZ                 |
+| `L`   | Imprimir estado da cena no console |
 
 
 ## 🏗 Estrutura do Projeto
