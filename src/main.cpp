@@ -1,45 +1,9 @@
-// ============================================================
-// main.cpp — 3D Scene Viewer entry point.
-//
-// Initialization order:
-//   1. GLFW init + window creation
-//   2. GLAD — loads OpenGL function pointers
-//   3. OpenGL state (depth test, viewport)
-//   4. Renderer::init() — compiles shaders, builds grid/axes GPU data
-//   5. Scene setup — add objects (from .obj files or procedural)
-//   6. Main loop:
-//        a. Poll events / process continuous key state
-//        b. renderer.render(scene, camera)
-//        c. Swap buffers
-//   7. Cleanup
-//
-// Key bindings:
-//   WASD            — move camera
-//   Mouse           — look around (FPS style)
-//   Space / C       — move camera up / down
-//   TAB             — select next object
-//   Shift+TAB       — select previous object
-//   Arrow keys      — translate selected object
-//   Page Up/Down    — translate selected object along Y
-//   Hold R + Arrows — rotate selected object
-//   Hold R + ,/.    — rotate selected object around Z
-//   = / +           — scale up selected object
-//   - / _           — scale down selected object
-//   P               — toggle perspective / orthographic
-//   F               — toggle wireframe overlay
-//   G               — toggle ground grid
-//   H               — toggle XYZ axes
-//   L               — print scene status to stdout
-//   Escape          — release mouse cursor / exit
-// ============================================================
-
 #include <iostream>
 #include <string>
 #include <memory>
 #include <vector>
 #include <stdexcept>
 
-// GLAD must be included before GLFW; it replaces <GL/gl.h>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -55,156 +19,123 @@
 #include "Renderer.h"
 #include "Primitives.h"
 
-// ============================================================
-// Window configuration constants
-// ============================================================
-static constexpr int   WINDOW_W     = 1280;
-static constexpr int   WINDOW_H     = 720;
-static constexpr char  WINDOW_TITLE[] = "3D Scene Viewer — Modern OpenGL";
+static constexpr int   JANELA_L     = 1280;
+static constexpr int   JANELA_A     = 720;
+static constexpr char  TITULO_JANELA[] = "Visualizador 3D — OpenGL Moderno";
 
-// ============================================================
-// Global state accessed by GLFW callbacks.
-// Using globals here is common practice for GLFW callbacks;
-// a production app would use glfwSetWindowUserPointer instead.
-// ============================================================
-static Camera*   g_camera   = nullptr;
-static Scene*    g_scene    = nullptr;
-static Renderer* g_renderer = nullptr;
+static Camera*        g_camera       = nullptr;
+static Cena*          g_cena         = nullptr;
+static Renderizador*  g_renderizador = nullptr;
 
-// Mouse tracking
-static bool  g_firstMouse   = true;
-static float g_lastX        = WINDOW_W / 2.f;
-static float g_lastY        = WINDOW_H / 2.f;
-static bool  g_mouseCaptured = true;  // start in capture mode
+static bool  g_primeiroMouse  = true;
+static float g_ultimoX        = JANELA_L / 2.f;
+static float g_ultimoY        = JANELA_A / 2.f;
+static bool  g_mouseCapturado = true;
 
-// Per-frame key state (polled each frame for smooth movement)
-static bool g_keys[GLFW_KEY_LAST + 1] = {};
+static bool g_teclas[GLFW_KEY_LAST + 1] = {};
 
-// ============================================================
-// GLFW Callbacks
-// ============================================================
-
-// framebufferSizeCallback — called whenever the window is resized.
-// We update the OpenGL viewport AND the camera aspect ratio so
-// the projection matrix stays correct.
-static void framebufferSizeCallback(GLFWwindow* /*win*/, int w, int h) {
-    if (h == 0) return; // guard against division by zero
-    glViewport(0, 0, w, h);
+static void callbackRedimensionar(GLFWwindow* /*win*/, int l, int a) {
+    if (a == 0) return;
+    glViewport(0, 0, l, a);
     if (g_camera) {
-        g_camera->aspectRatio = static_cast<float>(w) / static_cast<float>(h);
+        g_camera->proporcaoTela = static_cast<float>(l) / static_cast<float>(a);
     }
 }
 
-// mouseMoveCallback — called on every mouse movement.
-// Only rotates the camera when the cursor is captured.
-static void mouseMoveCallback(GLFWwindow* /*win*/, double xpos, double ypos) {
-    if (!g_camera || !g_mouseCaptured) return;
+static void callbackMoverMouse(GLFWwindow* /*win*/, double xpos, double ypos) {
+    if (!g_camera || !g_mouseCapturado) return;
 
     float fx = static_cast<float>(xpos);
     float fy = static_cast<float>(ypos);
 
-    if (g_firstMouse) {
-        g_lastX = fx;
-        g_lastY = fy;
-        g_firstMouse = false;
+    if (g_primeiroMouse) {
+        g_ultimoX = fx;
+        g_ultimoY = fy;
+        g_primeiroMouse = false;
     }
 
-    float xOffset =  (fx - g_lastX); // right is +yaw
-    float yOffset =  (g_lastY - fy); // up is +pitch (screen Y is flipped)
+    float offsetX = fx - g_ultimoX;
+    float offsetY = g_ultimoY - fy; // Y da tela e invertido
 
-    g_lastX = fx;
-    g_lastY = fy;
+    g_ultimoX = fx;
+    g_ultimoY = fy;
 
-    g_camera->processMouseMovement(xOffset, yOffset);
+    g_camera->processarMovimentoMouse(offsetX, offsetY);
 }
 
-// scrollCallback — zoom via field-of-view change
-static void scrollCallback(GLFWwindow* /*win*/, double /*x*/, double yOffset) {
+static void callbackRola(GLFWwindow* /*win*/, double /*x*/, double offsetY) {
     if (g_camera) {
-        g_camera->processMouseScroll(static_cast<float>(yOffset));
+        g_camera->processarRolaMouse(static_cast<float>(offsetY));
     }
 }
 
-// keyCallback — handles single-press actions (not held movement).
-// Continuous movement is handled by polling g_keys[] in the loop.
-static void keyCallback(GLFWwindow* win, int key, int /*scan*/, int action, int mods) {
-    // Track raw key state for polling
-    if (key >= 0 && key <= GLFW_KEY_LAST) {
-        if (action == GLFW_PRESS)   g_keys[key] = true;
-        if (action == GLFW_RELEASE) g_keys[key] = false;
+static void callbackTecla(GLFWwindow* win, int tecla, int /*scan*/, int acao, int mods) {
+    if (tecla >= 0 && tecla <= GLFW_KEY_LAST) {
+        if (acao == GLFW_PRESS)   g_teclas[tecla] = true;
+        if (acao == GLFW_RELEASE) g_teclas[tecla] = false;
     }
 
-    if (action != GLFW_PRESS) return; // only handle single-press events below
+    if (acao != GLFW_PRESS) return;
 
-    switch (key) {
-
-        // ---- Mouse capture toggle ----
+    switch (tecla) {
         case GLFW_KEY_ESCAPE:
-            if (g_mouseCaptured) {
-                // Release cursor
+            if (g_mouseCapturado) {
                 glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-                g_mouseCaptured = false;
-                g_firstMouse    = true;
+                g_mouseCapturado = false;
+                g_primeiroMouse  = true;
             } else {
-                // Exit application
                 glfwSetWindowShouldClose(win, GLFW_TRUE);
             }
             break;
 
-        // Re-capture cursor on left click (handled in mouse button callback)
-
-        // ---- Object selection (TAB / Shift+TAB) ----
         case GLFW_KEY_TAB:
-            if (g_scene) {
-                if (mods & GLFW_MOD_SHIFT) g_scene->selectPrev();
-                else                       g_scene->selectNext();
+            if (g_cena) {
+                if (mods & GLFW_MOD_SHIFT) g_cena->selecionarAnterior();
+                else                       g_cena->selecionarProximo();
             }
             break;
 
-        // ---- Rendering toggles ----
         case GLFW_KEY_P:
-            if (g_camera) g_camera->toggleProjection();
-            std::cout << "[Camera] Projection: "
-                      << (g_camera->projMode == ProjectionMode::Perspective
-                          ? "Perspective" : "Orthographic") << "\n";
+            if (g_camera) g_camera->alternarProjecao();
+            std::cout << "[Camera] Projecao: "
+                      << (g_camera->modoProjecao == ModoProjecao::Perspectiva
+                          ? "Perspectiva" : "Ortografica") << "\n";
             break;
 
         case GLFW_KEY_F:
-            if (g_renderer) {
-                g_renderer->wireframeEnabled = !g_renderer->wireframeEnabled;
-                std::cout << "[Renderer] Wireframe: "
-                          << (g_renderer->wireframeEnabled ? "ON" : "OFF") << "\n";
+            if (g_renderizador) {
+                g_renderizador->wireframeAtivado = !g_renderizador->wireframeAtivado;
+                std::cout << "[Renderizador] Wireframe: "
+                          << (g_renderizador->wireframeAtivado ? "ON" : "OFF") << "\n";
             }
             break;
 
         case GLFW_KEY_G:
-            if (g_renderer) {
-                g_renderer->showGrid = !g_renderer->showGrid;
-                std::cout << "[Renderer] Grid: "
-                          << (g_renderer->showGrid ? "ON" : "OFF") << "\n";
+            if (g_renderizador) {
+                g_renderizador->mostrarGrade = !g_renderizador->mostrarGrade;
+                std::cout << "[Renderizador] Grade: "
+                          << (g_renderizador->mostrarGrade ? "ON" : "OFF") << "\n";
             }
             break;
 
         case GLFW_KEY_H:
-            if (g_renderer) {
-                g_renderer->showAxes = !g_renderer->showAxes;
-                std::cout << "[Renderer] Axes: "
-                          << (g_renderer->showAxes ? "ON" : "OFF") << "\n";
+            if (g_renderizador) {
+                g_renderizador->mostrarEixos = !g_renderizador->mostrarEixos;
+                std::cout << "[Renderizador] Eixos: "
+                          << (g_renderizador->mostrarEixos ? "ON" : "OFF") << "\n";
             }
             break;
 
-        // ---- Scene status dump ----
         case GLFW_KEY_L:
-            if (g_scene) g_scene->printStatus();
+            if (g_cena) g_cena->imprimirStatus();
             break;
 
-        // ---- Reset selected object transform ----
         case GLFW_KEY_BACKSPACE:
-            if (g_scene) {
-                Object3D* active = g_scene->getActive();
-                if (active) {
-                    active->resetTransform();
-                    std::cout << "[Object3D] Reset transform: " << active->name << "\n";
+            if (g_cena) {
+                Objeto3D* ativo = g_cena->obterAtivo();
+                if (ativo) {
+                    ativo->resetarTransformacao();
+                    std::cout << "[Objeto3D] Transformacao resetada: " << ativo->nome << "\n";
                 }
             }
             break;
@@ -213,292 +144,223 @@ static void keyCallback(GLFWwindow* win, int key, int /*scan*/, int action, int 
     }
 }
 
-// mouseButtonCallback — recapture cursor on left click
-static void mouseButtonCallback(GLFWwindow* win, int button, int action, int /*mods*/) {
-    if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS && !g_mouseCaptured) {
+static void callbackBotaoMouse(GLFWwindow* win, int botao, int acao, int /*mods*/) {
+    if (botao == GLFW_MOUSE_BUTTON_LEFT && acao == GLFW_PRESS && !g_mouseCapturado) {
         glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-        g_mouseCaptured = true;
-        g_firstMouse    = true; // prevent jump on recapture
+        g_mouseCapturado = true;
+        g_primeiroMouse  = true;
     }
 }
 
-// ============================================================
-// processInput — Called every frame to handle held keys.
-//
-// Camera movement and object transforms are smoothed by
-// deltaTime (seconds since last frame) for frame-rate independence.
-// ============================================================
-static void processInput(float deltaTime) {
-    if (!g_camera || !g_scene) return;
+static void processarEntrada(float deltaTempo) {
+    if (!g_camera || !g_cena) return;
 
-    // ---- Camera movement (WASD + Space/C) ----
-    if (g_keys[GLFW_KEY_W])            g_camera->processKeyboard(Camera::FORWARD,  deltaTime);
-    if (g_keys[GLFW_KEY_S])            g_camera->processKeyboard(Camera::BACKWARD, deltaTime);
-    if (g_keys[GLFW_KEY_A])            g_camera->processKeyboard(Camera::LEFT,     deltaTime);
-    if (g_keys[GLFW_KEY_D])            g_camera->processKeyboard(Camera::RIGHT,    deltaTime);
-    if (g_keys[GLFW_KEY_SPACE])        g_camera->processKeyboard(Camera::UP_DIR,   deltaTime);
-    if (g_keys[GLFW_KEY_C])            g_camera->processKeyboard(Camera::DOWN_DIR, deltaTime);
+    if (g_teclas[GLFW_KEY_W])     g_camera->processarTeclado(Camera::FRENTE,   deltaTempo);
+    if (g_teclas[GLFW_KEY_S])     g_camera->processarTeclado(Camera::TRAS,     deltaTempo);
+    if (g_teclas[GLFW_KEY_A])     g_camera->processarTeclado(Camera::ESQUERDA, deltaTempo);
+    if (g_teclas[GLFW_KEY_D])     g_camera->processarTeclado(Camera::DIREITA,  deltaTempo);
+    if (g_teclas[GLFW_KEY_SPACE]) g_camera->processarTeclado(Camera::CIMA,     deltaTempo);
+    if (g_teclas[GLFW_KEY_C])     g_camera->processarTeclado(Camera::BAIXO,    deltaTempo);
 
-    // ---- Object transforms ----
-    Object3D* obj = g_scene->getActive();
+    Objeto3D* obj = g_cena->obterAtivo();
     if (!obj) return;
 
-    const float tSpeed = 3.f * deltaTime;   // translation speed (units/sec)
-    const float rSpeed = 90.f * deltaTime;  // rotation speed    (degrees/sec)
-    const float sUp    = 1.f + 0.8f * deltaTime; // scale-up factor
-    const float sDown  = 1.f / sUp;              // scale-down factor
+    const float velTrans = 3.f * deltaTempo;
+    const float velRot   = 90.f * deltaTempo;
+    const float escCima  = 1.f + 0.8f * deltaTempo;
+    const float escBaixo = 1.f / escCima;
 
-    bool rHeld = g_keys[GLFW_KEY_R]; // hold R for rotation mode
+    bool rPressionado = g_teclas[GLFW_KEY_R];
 
-    if (!rHeld) {
-        // Translation mode (Arrow keys + Page Up/Down)
-        if (g_keys[GLFW_KEY_UP])        obj->translate({ 0.f,  0.f, -tSpeed});
-        if (g_keys[GLFW_KEY_DOWN])      obj->translate({ 0.f,  0.f,  tSpeed});
-        if (g_keys[GLFW_KEY_LEFT])      obj->translate({-tSpeed, 0.f,  0.f});
-        if (g_keys[GLFW_KEY_RIGHT])     obj->translate({ tSpeed, 0.f,  0.f});
-        if (g_keys[GLFW_KEY_PAGE_UP])   obj->translate({ 0.f,  tSpeed, 0.f});
-        if (g_keys[GLFW_KEY_PAGE_DOWN]) obj->translate({ 0.f, -tSpeed, 0.f});
+    if (!rPressionado) {
+        if (g_teclas[GLFW_KEY_UP])        obj->transladar({ 0.f,  0.f, -velTrans});
+        if (g_teclas[GLFW_KEY_DOWN])      obj->transladar({ 0.f,  0.f,  velTrans});
+        if (g_teclas[GLFW_KEY_LEFT])      obj->transladar({-velTrans, 0.f,  0.f});
+        if (g_teclas[GLFW_KEY_RIGHT])     obj->transladar({ velTrans, 0.f,  0.f});
+        if (g_teclas[GLFW_KEY_PAGE_UP])   obj->transladar({ 0.f,  velTrans, 0.f});
+        if (g_teclas[GLFW_KEY_PAGE_DOWN]) obj->transladar({ 0.f, -velTrans, 0.f});
     } else {
-        // Rotation mode (hold R, then Arrow keys / , . for Z)
-        if (g_keys[GLFW_KEY_UP])        obj->rotate({-rSpeed, 0.f,   0.f});
-        if (g_keys[GLFW_KEY_DOWN])      obj->rotate({ rSpeed, 0.f,   0.f});
-        if (g_keys[GLFW_KEY_LEFT])      obj->rotate({ 0.f,  -rSpeed, 0.f});
-        if (g_keys[GLFW_KEY_RIGHT])     obj->rotate({ 0.f,   rSpeed, 0.f});
-        if (g_keys[GLFW_KEY_COMMA])     obj->rotate({ 0.f,   0.f, -rSpeed});
-        if (g_keys[GLFW_KEY_PERIOD])    obj->rotate({ 0.f,   0.f,  rSpeed});
+        if (g_teclas[GLFW_KEY_UP])     obj->rotacionar({-velRot, 0.f,   0.f});
+        if (g_teclas[GLFW_KEY_DOWN])   obj->rotacionar({ velRot, 0.f,   0.f});
+        if (g_teclas[GLFW_KEY_LEFT])   obj->rotacionar({ 0.f,  -velRot, 0.f});
+        if (g_teclas[GLFW_KEY_RIGHT])  obj->rotacionar({ 0.f,   velRot, 0.f});
+        if (g_teclas[GLFW_KEY_COMMA])  obj->rotacionar({ 0.f,   0.f, -velRot});
+        if (g_teclas[GLFW_KEY_PERIOD]) obj->rotacionar({ 0.f,   0.f,  velRot});
     }
 
-    // Scale (= / +  to grow,  -  to shrink)
-    if (g_keys[GLFW_KEY_EQUAL] || g_keys[GLFW_KEY_KP_ADD])      obj->scaleBy(sUp);
-    if (g_keys[GLFW_KEY_MINUS] || g_keys[GLFW_KEY_KP_SUBTRACT]) obj->scaleBy(sDown);
+    if (g_teclas[GLFW_KEY_EQUAL] || g_teclas[GLFW_KEY_KP_ADD])      obj->escalarPor(escCima);
+    if (g_teclas[GLFW_KEY_MINUS] || g_teclas[GLFW_KEY_KP_SUBTRACT]) obj->escalarPor(escBaixo);
 }
 
-// ============================================================
-// createDemoScene — Populate the scene with built-in primitives
-// and attempt to load any .obj files passed as command-line args.
-//
-// The demo always has at least a cube and a sphere so the viewer
-// works even with no external model files.
-// ============================================================
-static void createDemoScene(Scene& scene, const std::vector<std::string>& modelPaths) {
-    // ---- Built-in primitives ----
-    // Helper: wrap a Mesh into a Model without loading from disk
-    auto makePrimitiveModel = [](Mesh&& mesh) -> std::shared_ptr<Model> {
-        auto m = std::make_shared<Model>();
-        m->meshes.push_back(std::move(mesh));
+static void criarCenaDemo(Cena& cena, const std::vector<std::string>& caminhos) {
+    auto criarModeloPrimitivo = [](Malha&& malha) -> std::shared_ptr<Modelo> {
+        auto m = std::make_shared<Modelo>();
+        m->malhas.push_back(std::move(malha));
         return m;
     };
 
-    // Cube — red, left side
     {
-        auto obj = std::make_unique<Object3D>(
-            "Cube",
-            makePrimitiveModel(Primitives::createCube(1.f))
+        auto obj = std::make_unique<Objeto3D>(
+            "Cubo",
+            criarModeloPrimitivo(Primitivos::criarCubo(1.f))
         );
-        obj->position     = glm::vec3(-2.f, 0.5f, 0.f);
-        obj->material.color    = glm::vec3(0.8f, 0.2f, 0.2f); // red
-        obj->material.diffuse  = glm::vec3(0.9f, 0.3f, 0.3f);
-        obj->material.specular = glm::vec3(0.6f);
-        obj->material.shininess = 64.f;
-        scene.addObject(std::move(obj));
+        obj->posicao          = glm::vec3(-2.f, 0.5f, 0.f);
+        obj->material.cor     = glm::vec3(0.8f, 0.2f, 0.2f);
+        obj->material.difuso  = glm::vec3(0.9f, 0.3f, 0.3f);
+        obj->material.especular = glm::vec3(0.6f);
+        obj->material.brilho  = 64.f;
+        cena.adicionarObjeto(std::move(obj));
     }
 
-    // Sphere — blue-green, right side
     {
-        auto obj = std::make_unique<Object3D>(
-            "Sphere",
-            makePrimitiveModel(Primitives::createSphere(0.8f, 36, 24))
+        auto obj = std::make_unique<Objeto3D>(
+            "Esfera",
+            criarModeloPrimitivo(Primitivos::criarEsfera(0.8f, 36, 24))
         );
-        obj->position     = glm::vec3(2.f, 0.8f, 0.f);
-        obj->material.color    = glm::vec3(0.2f, 0.5f, 0.9f); // blue
-        obj->material.diffuse  = glm::vec3(0.3f, 0.5f, 0.9f);
-        obj->material.specular = glm::vec3(0.8f);
-        obj->material.shininess = 128.f;
-        scene.addObject(std::move(obj));
+        obj->posicao          = glm::vec3(2.f, 0.8f, 0.f);
+        obj->material.cor     = glm::vec3(0.2f, 0.5f, 0.9f);
+        obj->material.difuso  = glm::vec3(0.3f, 0.5f, 0.9f);
+        obj->material.especular = glm::vec3(0.8f);
+        obj->material.brilho  = 128.f;
+        cena.adicionarObjeto(std::move(obj));
     }
 
-    // Ground plane — dark grey
     {
-        auto obj = std::make_unique<Object3D>(
-            "Ground",
-            makePrimitiveModel(Primitives::createPlane(8.f))
+        auto obj = std::make_unique<Objeto3D>(
+            "Chao",
+            criarModeloPrimitivo(Primitivos::criarPlano(8.f))
         );
-        obj->position = glm::vec3(0.f, 0.f, 0.f);
-        obj->material.color    = glm::vec3(0.3f, 0.32f, 0.3f);
-        obj->material.diffuse  = glm::vec3(0.3f);
-        obj->material.specular = glm::vec3(0.05f);
-        obj->material.shininess = 8.f;
-        scene.addObject(std::move(obj));
+        obj->posicao          = glm::vec3(0.f);
+        obj->material.cor     = glm::vec3(0.3f, 0.32f, 0.3f);
+        obj->material.difuso  = glm::vec3(0.3f);
+        obj->material.especular = glm::vec3(0.05f);
+        obj->material.brilho  = 8.f;
+        cena.adicionarObjeto(std::move(obj));
     }
 
-    // ---- Load external model files from command-line ----
-    for (const auto& path : modelPaths) {
+    for (const auto& caminho : caminhos) {
         try {
-            auto model = std::make_shared<Model>(path);
-            auto obj   = std::make_unique<Object3D>(path, model);
-            // Auto-space objects along X axis
-            float offset = static_cast<float>(scene.objectCount()) * 3.f - 3.f;
-            obj->position = glm::vec3(offset, 0.f, -4.f);
-            scene.addObject(std::move(obj));
+            auto modelo = std::make_shared<Modelo>(caminho);
+            auto obj    = std::make_unique<Objeto3D>(caminho, modelo);
+            float offset = static_cast<float>(cena.contarObjetos()) * 3.f - 3.f;
+            obj->posicao = glm::vec3(offset, 0.f, -4.f);
+            cena.adicionarObjeto(std::move(obj));
         } catch (const std::exception& e) {
-            std::cerr << "[Main] Failed to load model '" << path << "': "
+            std::cerr << "[Main] Falha ao carregar modelo '" << caminho << "': "
                       << e.what() << "\n";
         }
     }
 
-    // Light position
-    scene.light.position = glm::vec3(4.f, 6.f, 4.f);
+    cena.luz.posicao = glm::vec3(4.f, 6.f, 4.f);
 }
 
-// ============================================================
-// printUsage — Show startup information
-// ============================================================
-static void printUsage(const char* exeName) {
+static void imprimirUso(const char* nomeExe) {
     std::cout
         << "┌─────────────────────────────────────────────┐\n"
-        << "│         3D Scene Viewer — Modern OpenGL      │\n"
+        << "│       Visualizador 3D — OpenGL Moderno       │\n"
         << "└─────────────────────────────────────────────┘\n"
-        << "Usage: " << exeName << " [model.obj] [model2.ply] ...\n\n"
-        << "Controls:\n"
-        << "  WASD / Space / C  — move camera\n"
-        << "  Mouse             — look around\n"
-        << "  TAB / Shift+TAB   — select next/prev object\n"
-        << "  Arrow keys        — translate selected object\n"
-        << "  Page Up/Down      — translate selected object up/down\n"
-        << "  R + Arrows        — rotate selected object\n"
-        << "  R + , / .         — rotate around Z axis\n"
-        << "  = / -             — scale up / down\n"
-        << "  P                 — toggle perspective/orthographic\n"
-        << "  F                 — toggle wireframe overlay\n"
-        << "  G                 — toggle ground grid\n"
-        << "  H                 — toggle XYZ axes\n"
-        << "  L                 — print scene status\n"
-        << "  Backspace         — reset selected object transform\n"
-        << "  Escape            — release mouse / exit\n\n";
+        << "Uso: " << nomeExe << " [modelo.obj] [modelo2.ply] ...\n\n"
+        << "Controles:\n"
+        << "  WASD / Space / C  — mover camera\n"
+        << "  Mouse             — olhar ao redor\n"
+        << "  TAB / Shift+TAB   — selecionar proximo/anterior\n"
+        << "  Setas             — transladar objeto selecionado\n"
+        << "  Page Up/Down      — transladar objeto para cima/baixo\n"
+        << "  R + Setas         — rotacionar objeto selecionado\n"
+        << "  R + , / .         — rotacionar em torno do eixo Z\n"
+        << "  = / -             — escalar para cima / baixo\n"
+        << "  P                 — alternar perspectiva/ortografica\n"
+        << "  F                 — alternar wireframe\n"
+        << "  G                 — alternar grade\n"
+        << "  H                 — alternar eixos\n"
+        << "  L                 — imprimir status da cena\n"
+        << "  Backspace         — resetar transformacao do objeto\n"
+        << "  Escape            — soltar mouse / sair\n\n";
 }
 
-// ============================================================
-// main
-// ============================================================
 int main(int argc, char** argv) {
-    // Collect optional model file paths from command-line args
-    std::vector<std::string> modelPaths;
+    std::vector<std::string> caminhos;
     for (int i = 1; i < argc; ++i) {
-        modelPaths.emplace_back(argv[i]);
+        caminhos.emplace_back(argv[i]);
     }
 
-    printUsage(argv[0]);
+    imprimirUso(argv[0]);
 
-    // ---- 1. Initialise GLFW ----
     if (!glfwInit()) {
-        std::cerr << "[GLFW] Initialisation failed.\n";
+        std::cerr << "[GLFW] Falha na inicializacao.\n";
         return 1;
     }
 
-    // Request OpenGL 4.6 Core Profile.
-    // Core profile removes all deprecated "fixed pipeline" functions.
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    // Uncomment for macOS compatibility:
-    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-    // Enable multisampling (4x MSAA) for smoother edges
     glfwWindowHint(GLFW_SAMPLES, 4);
 
-    // ---- 2. Create window and OpenGL context ----
-    GLFWwindow* window = glfwCreateWindow(WINDOW_W, WINDOW_H, WINDOW_TITLE,
+    GLFWwindow* janela = glfwCreateWindow(JANELA_L, JANELA_A, TITULO_JANELA,
                                           nullptr, nullptr);
-    if (!window) {
-        std::cerr << "[GLFW] Window creation failed.\n";
+    if (!janela) {
+        std::cerr << "[GLFW] Falha ao criar janela.\n";
         glfwTerminate();
         return 1;
     }
 
-    // Make this window's context current on the calling thread.
-    // All subsequent OpenGL calls apply to this context.
-    glfwMakeContextCurrent(window);
-
-    // Enable VSync (0 = off, 1 = sync to monitor refresh)
+    glfwMakeContextCurrent(janela);
     glfwSwapInterval(1);
 
-    // ---- 3. Initialise GLAD ----
-    // GLAD loads all OpenGL function pointers via GLFW's proc-address function.
-    // This MUST happen after glfwMakeContextCurrent and BEFORE any gl* calls.
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
-        std::cerr << "[GLAD] Failed to load OpenGL function pointers.\n";
+        std::cerr << "[GLAD] Falha ao carregar ponteiros OpenGL.\n";
         glfwTerminate();
         return 1;
     }
 
-    std::cout << "[OpenGL] Version: " << glGetString(GL_VERSION) << "\n"
-              << "[OpenGL] Renderer: " << glGetString(GL_RENDERER) << "\n\n";
+    std::cout << "[OpenGL] Versao: " << glGetString(GL_VERSION) << "\n"
+              << "[OpenGL] Renderizador: " << glGetString(GL_RENDERER) << "\n\n";
 
-    // Enable 4x MSAA (must match the hint above)
     glEnable(GL_MULTISAMPLE);
 
-    // ---- 4. Set up camera ----
     Camera camera(glm::vec3(0.f, 2.f, 8.f),
-                  static_cast<float>(WINDOW_W) / static_cast<float>(WINDOW_H));
+                  static_cast<float>(JANELA_L) / static_cast<float>(JANELA_A));
     g_camera = &camera;
 
-    // ---- 5. Register callbacks ----
-    glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
-    glfwSetCursorPosCallback      (window, mouseMoveCallback);
-    glfwSetScrollCallback         (window, scrollCallback);
-    glfwSetKeyCallback            (window, keyCallback);
-    glfwSetMouseButtonCallback    (window, mouseButtonCallback);
+    glfwSetFramebufferSizeCallback(janela, callbackRedimensionar);
+    glfwSetCursorPosCallback      (janela, callbackMoverMouse);
+    glfwSetScrollCallback         (janela, callbackRola);
+    glfwSetKeyCallback            (janela, callbackTecla);
+    glfwSetMouseButtonCallback    (janela, callbackBotaoMouse);
 
-    // Capture the mouse cursor (hides it and locks it to the window)
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(janela, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    // ---- 6. Build scene ----
-    Scene    scene;
-    g_scene  = &scene;
+    Cena         cena;
+    g_cena       = &cena;
 
-    Renderer renderer;
-    g_renderer = &renderer;
+    Renderizador renderizador;
+    g_renderizador = &renderizador;
 
-    // init() compiles shaders and builds GPU buffers — must be after GLAD
-    renderer.init();
+    renderizador.inicializar();
+    criarCenaDemo(cena, caminhos);
 
-    // Populate the scene with primitives + any command-line models
-    createDemoScene(scene, modelPaths);
+    std::cout << "[Cena] " << cena.contarObjetos() << " objetos carregados.\n"
+              << "[Cena] Ativo: " << (cena.obterAtivo() ? cena.obterAtivo()->nome : "nenhum") << "\n\n";
 
-    std::cout << "[Scene] " << scene.objectCount() << " objects loaded.\n"
-              << "[Scene] Active: " << (scene.getActive() ? scene.getActive()->name : "none") << "\n\n";
+    float ultimoTempo = static_cast<float>(glfwGetTime());
 
-    // ---- 7. Main render loop ----
-    float lastTime  = static_cast<float>(glfwGetTime());
+    while (!glfwWindowShouldClose(janela)) {
+        float tempoAtual = static_cast<float>(glfwGetTime());
+        float deltaTempo = tempoAtual - ultimoTempo;
+        ultimoTempo      = tempoAtual;
 
-    while (!glfwWindowShouldClose(window)) {
-        // Delta time — time since last frame in seconds
-        float currentTime = static_cast<float>(glfwGetTime());
-        float deltaTime   = currentTime - lastTime;
-        lastTime          = currentTime;
+        // Limita para evitar saltos apos alt-tab ou breakpoints
+        if (deltaTempo > 0.1f) deltaTempo = 0.1f;
 
-        // Clamp deltaTime to avoid huge jumps after alt-tab / breakpoints
-        if (deltaTime > 0.1f) deltaTime = 0.1f;
-
-        // Process held-key input (camera movement + object transforms)
-        processInput(deltaTime);
-
-        // Draw the scene
-        renderer.render(scene, camera);
-
-        // Present the rendered frame
-        glfwSwapBuffers(window);
-
-        // Poll OS events (keyboard, mouse, window resize, etc.)
+        processarEntrada(deltaTempo);
+        renderizador.renderizar(cena, camera);
+        glfwSwapBuffers(janela);
         glfwPollEvents();
     }
 
-    // ---- 8. Cleanup ----
-    // Objects with destructors (unique_ptr in Scene) handle GPU cleanup.
-    // Renderer destructor deletes VAOs/VBOs.
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(janela);
     glfwTerminate();
 
-    std::cout << "[Main] Goodbye.\n";
+    std::cout << "[Main] Ate mais.\n";
     return 0;
 }

@@ -3,75 +3,53 @@
 #include <iostream>
 #include <algorithm>
 
-// ============================================================
-// addObject — Transfer ownership of an Object3D to the scene.
-// The first object added automatically becomes the selection.
-// ============================================================
-void Scene::addObject(std::unique_ptr<Object3D> obj) {
-    objects.push_back(std::move(obj));
-    syncSelectionFlags();
+void Cena::adicionarObjeto(std::unique_ptr<Objeto3D> obj) {
+    objetos.push_back(std::move(obj));
+    sincronizarFlagsSelecao();
 }
 
-// ============================================================
-// selectNext — Move selection forward by one, wrapping around.
-// If the scene is empty nothing changes.
-// ============================================================
-void Scene::selectNext() {
-    if (objects.empty()) return;
-    activeIndex = (activeIndex + 1) % static_cast<int>(objects.size());
-    syncSelectionFlags();
-    std::cout << "[Scene] Selected: " << objects[activeIndex]->name
-              << " (" << activeIndex + 1 << "/" << objects.size() << ")\n";
+void Cena::selecionarProximo() {
+    if (objetos.empty()) return;
+    indiceAtivo = (indiceAtivo + 1) % static_cast<int>(objetos.size());
+    sincronizarFlagsSelecao();
+    std::cout << "[Cena] Selecionado: " << objetos[indiceAtivo]->nome
+              << " (" << indiceAtivo + 1 << "/" << objetos.size() << ")\n";
 }
 
-// ============================================================
-// selectPrev — Move selection backward by one, wrapping around.
-// ============================================================
-void Scene::selectPrev() {
-    if (objects.empty()) return;
-    activeIndex = (activeIndex - 1 + static_cast<int>(objects.size()))
-                  % static_cast<int>(objects.size());
-    syncSelectionFlags();
-    std::cout << "[Scene] Selected: " << objects[activeIndex]->name
-              << " (" << activeIndex + 1 << "/" << objects.size() << ")\n";
+void Cena::selecionarAnterior() {
+    if (objetos.empty()) return;
+    indiceAtivo = (indiceAtivo - 1 + static_cast<int>(objetos.size()))
+                  % static_cast<int>(objetos.size());
+    sincronizarFlagsSelecao();
+    std::cout << "[Cena] Selecionado: " << objetos[indiceAtivo]->nome
+              << " (" << indiceAtivo + 1 << "/" << objetos.size() << ")\n";
 }
 
-// ============================================================
-// getActive — Return a pointer to the selected object,
-// or nullptr when the scene has no objects.
-// ============================================================
-Object3D* Scene::getActive() {
-    if (objects.empty()) return nullptr;
-    return objects[activeIndex].get();
+Objeto3D* Cena::obterAtivo() {
+    if (objetos.empty()) return nullptr;
+    return objetos[indiceAtivo].get();
 }
 
-const Object3D* Scene::getActive() const {
-    if (objects.empty()) return nullptr;
-    return objects[activeIndex].get();
+const Objeto3D* Cena::obterAtivo() const {
+    if (objetos.empty()) return nullptr;
+    return objetos[indiceAtivo].get();
 }
 
-// ============================================================
-// printStatus — Print a one-line scene summary (for debug HUD).
-// ============================================================
-void Scene::printStatus() const {
-    if (objects.empty()) {
-        std::cout << "[Scene] Empty\n";
+void Cena::imprimirStatus() const {
+    if (objetos.empty()) {
+        std::cout << "[Cena] Vazia\n";
         return;
     }
-    const Object3D* a = getActive();
-    std::cout << "[Scene] Objects: " << objects.size()
-              << "  Active: " << a->name
-              << "  Pos: (" << a->position.x << ", "
-                            << a->position.y << ", "
-                            << a->position.z << ")\n";
+    const Objeto3D* a = obterAtivo();
+    std::cout << "[Cena] Objetos: " << objetos.size()
+              << "  Ativo: " << a->nome
+              << "  Pos: (" << a->posicao.x << ", "
+                            << a->posicao.y << ", "
+                            << a->posicao.z << ")\n";
 }
 
-// ============================================================
-// syncSelectionFlags — Keep isSelected consistent with activeIndex.
-// Only one object should have isSelected == true at a time.
-// ============================================================
-void Scene::syncSelectionFlags() {
-    for (int i = 0; i < static_cast<int>(objects.size()); ++i) {
-        objects[i]->isSelected = (i == activeIndex);
+void Cena::sincronizarFlagsSelecao() {
+    for (int i = 0; i < static_cast<int>(objetos.size()); ++i) {
+        objetos[i]->estaSelecionado = (i == indiceAtivo);
     }
 }

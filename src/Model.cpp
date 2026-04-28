@@ -3,29 +3,16 @@
 #include <iostream>
 #include <stdexcept>
 
-// Assimp headers — only included in the .cpp to keep compile times down
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
-// ============================================================
-// Constructor — Load and parse a 3D file via Assimp.
-//
-// Import flags:
-//   aiProcess_Triangulate        — convert polygons → triangles
-//   aiProcess_GenSmoothNormals   — compute per-vertex averaged normals
-//                                  if the file doesn't have them
-//   aiProcess_FlipUVs            — flip V coordinate (OBJ/PNG origin mismatch)
-//   aiProcess_JoinIdenticalVertices — weld duplicate vertices
-//   aiProcess_OptimizeMeshes     — merge small meshes → fewer draw calls
-//   aiProcess_ValidateDataStructure — catch malformed files early
-// ============================================================
-Model::Model(const std::string& path) : filePath(path) {
-    std::cout << "[Model] Loading: " << path << "\n";
+Modelo::Modelo(const std::string& caminho) : caminhoArquivo(caminho) {
+    std::cout << "[Modelo] Carregando: " << caminho << "\n";
 
     Assimp::Importer importer;
 
-    const aiScene* scene = importer.ReadFile(path,
+    const aiScene* cena = importer.ReadFile(caminho,
         aiProcess_Triangulate           |
         aiProcess_GenSmoothNormals      |
         aiProcess_FlipUVs               |
@@ -34,118 +21,81 @@ Model::Model(const std::string& path) : filePath(path) {
         aiProcess_ValidateDataStructure
     );
 
-    // Check for parse errors
-    if (!scene
-        || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE)
-        || !scene->mRootNode)
+    if (!cena
+        || (cena->mFlags & AI_SCENE_FLAGS_INCOMPLETE)
+        || !cena->mRootNode)
     {
         throw std::runtime_error(
-            std::string("[Model] Assimp error: ") + importer.GetErrorString());
+            std::string("[Modelo] Erro Assimp: ") + importer.GetErrorString());
     }
 
-    // The directory is used when loading textures referenced by the model
-    directory = path.substr(0, path.find_last_of("/\\"));
+    diretorio = caminho.substr(0, caminho.find_last_of("/\\"));
+    processarNo(cena->mRootNode, cena);
 
-    // Walk the node tree starting from the root
-    processNode(scene->mRootNode, scene);
-
-    std::cout << "[Model] Loaded " << meshes.size() << " mesh(es) from: " << path << "\n";
+    std::cout << "[Modelo] " << malhas.size() << " malha(s) carregada(s) de: " << caminho << "\n";
 }
 
-// ============================================================
-// processNode — Recursively walk Assimp's node hierarchy.
-//
-// Each node can reference multiple meshes by index into
-// scene->mMeshes[].  After processing a node we recurse into
-// its children to handle hierarchical models (e.g., FBX with
-// bone transforms).  We ignore the node transform here since
-// Object3D manages its own model matrix.
-// ============================================================
-void Model::processNode(const aiNode* node, const aiScene* scene) {
-    // Process all mesh references in this node
-    for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
-        aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        meshes.push_back(processMesh(mesh, scene));
+void Modelo::processarNo(const aiNode* no, const aiScene* cena) {
+    for (unsigned int i = 0; i < no->mNumMeshes; ++i) {
+        aiMesh* malha = cena->mMeshes[no->mMeshes[i]];
+        malhas.push_back(processarMalha(malha, cena));
     }
 
-    // Recurse into child nodes
-    for (unsigned int i = 0; i < node->mNumChildren; ++i) {
-        processNode(node->mChildren[i], scene);
+    for (unsigned int i = 0; i < no->mNumChildren; ++i) {
+        processarNo(no->mChildren[i], cena);
     }
 }
 
-// ============================================================
-// processMesh — Convert a single aiMesh to our Mesh type.
-//
-// Vertex extraction:
-//   • position  — always present (aiMesh::mVertices)
-//   • normal    — present if HasNormals() (aiProcess_GenSmoothNormals ensures this)
-//   • texCoords — first UV channel (mTextureCoords[0]), zeroed if absent
-//
-// Index extraction:
-//   • aiProcess_Triangulate guarantees each face has exactly 3 indices.
-// ============================================================
-Mesh Model::processMesh(const aiMesh* mesh, const aiScene* /*scene*/) {
-    std::vector<Vertex>       vertices;
+Malha Modelo::processarMalha(const aiMesh* malha, const aiScene* /*cena*/) {
+    std::vector<Vertice>      vertices;
     std::vector<unsigned int> indices;
 
-    vertices.reserve(mesh->mNumVertices);
-    indices.reserve(static_cast<size_t>(mesh->mNumFaces) * 3);
+    vertices.reserve(malha->mNumVertices);
+    indices.reserve(static_cast<size_t>(malha->mNumFaces) * 3);
 
-    // ---- Vertices ----
-    for (unsigned int i = 0; i < mesh->mNumVertices; ++i) {
-        Vertex v;
+    for (unsigned int i = 0; i < malha->mNumVertices; ++i) {
+        Vertice v;
 
-        // Position (always available after import)
-        v.position = {
-            mesh->mVertices[i].x,
-            mesh->mVertices[i].y,
-            mesh->mVertices[i].z
+        v.posicao = {
+            malha->mVertices[i].x,
+            malha->mVertices[i].y,
+            malha->mVertices[i].z
         };
 
-        // Normal (generated by aiProcess_GenSmoothNormals if missing)
-        if (mesh->HasNormals()) {
+        if (malha->HasNormals()) {
             v.normal = {
-                mesh->mNormals[i].x,
-                mesh->mNormals[i].y,
-                mesh->mNormals[i].z
+                malha->mNormals[i].x,
+                malha->mNormals[i].y,
+                malha->mNormals[i].z
             };
         } else {
-            v.normal = {0.f, 1.f, 0.f}; // fallback: point upward
+            v.normal = {0.f, 1.f, 0.f};
         }
 
-        // Texture coordinates — only the first UV channel (index 0)
-        if (mesh->mTextureCoords[0]) {
-            v.texCoords = {
-                mesh->mTextureCoords[0][i].x,
-                mesh->mTextureCoords[0][i].y
+        if (malha->mTextureCoords[0]) {
+            v.coordTex = {
+                malha->mTextureCoords[0][i].x,
+                malha->mTextureCoords[0][i].y
             };
         } else {
-            v.texCoords = {0.f, 0.f};
+            v.coordTex = {0.f, 0.f};
         }
 
         vertices.push_back(v);
     }
 
-    // ---- Indices ----
-    for (unsigned int i = 0; i < mesh->mNumFaces; ++i) {
-        const aiFace& face = mesh->mFaces[i];
-        // After aiProcess_Triangulate each face has exactly 3 indices
+    for (unsigned int i = 0; i < malha->mNumFaces; ++i) {
+        const aiFace& face = malha->mFaces[i];
         for (unsigned int j = 0; j < face.mNumIndices; ++j) {
             indices.push_back(face.mIndices[j]);
         }
     }
 
-    return Mesh(vertices, indices);
+    return Malha(vertices, indices);
 }
 
-// ============================================================
-// draw — Call draw() on every sub-mesh.
-// The caller is responsible for binding a shader program and
-// setting all required uniforms before calling this.
-// ============================================================
-void Model::draw() const {
-    for (const Mesh& m : meshes) {
-        m.draw();
+void Modelo::desenhar() const {
+    for (const Malha& m : malhas) {
+        m.desenhar();
     }
 }
