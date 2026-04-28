@@ -60,7 +60,7 @@ Aplicação desenvolvida em **C++17** com **OpenGL 4.6 Core Profile**. Carrega m
 
 **Passo 1 — Instalar o vcpkg** (pule se já tiver)
 
-```bat
+
 git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat
 Passo 2 — Instalar as dependências
