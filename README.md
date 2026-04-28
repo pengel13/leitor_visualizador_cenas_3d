@@ -58,20 +58,23 @@ Aplicação desenvolvida em **C++17** com **OpenGL 4.6 Core Profile**. Carrega m
 
 ### Windows (MSVC + vcpkg) — Recomendado
 
-**Passo 1 — Instalar o vcpkg** (pule se já tiver)
+** Passo 1 — Instalar o vcpkg** (pule se já tiver)
 
-
+```
 git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
 C:\vcpkg\bootstrap-vcpkg.bat
-Passo 2 — Instalar as dependências
+```
 
+** Passo 2 — Instalar as dependências
 
+```
 C:\vcpkg\vcpkg install glad glfw3 glm assimp --triplet x64-windows
 Se o arquivo vcpkg.json estiver na raiz do projeto, o vcpkg instala as dependências automaticamente durante o cmake (manifest mode).
+```
 
-Passo 3 — Configurar e compilar
+** Passo 3 — Configurar e compilar
 
-
+```
 git clone https://github.com/pengel13/leitor_visualizador_cenas_3d.git
 cd leitor_visualizador_cenas_3d
 
@@ -80,13 +83,18 @@ cmake -S . -B build ^
   -DCMAKE_BUILD_TYPE=Release
 
 cmake --build build --config Release
-Passo 4 — Executar
+```
 
+** Passo 4 — Executar
 
+```
 .\build\Release\SceneViewer3D.exe
 Linux (GCC/Clang)
+```
 
-# Ubuntu / Debian
+##3 Ubuntu / Debian
+
+```
 sudo apt install cmake libglfw3-dev libglm-dev libassimp-dev
 
 git clone https://github.com/pengel13/leitor_visualizador_cenas_3d.git
@@ -95,20 +103,26 @@ cd leitor_visualizador_cenas_3d
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 ./build/SceneViewer3D
-Nota: O GLAD já está incluído no projeto. No Linux é necessário ter o driver OpenGL com suporte à versão 4.6.
+```
 
-▶ Exemplo de Uso
+** Nota: O GLAD já está incluído no projeto. No Linux é necessário ter o driver OpenGL com suporte à versão 4.6.
+
+## ▶ Exemplo de Uso
 Executar com modelos padrão da cena de demonstração:
 
-
+```
 .\build\Release\SceneViewer3D.exe
+```
+
 Carregar modelos via argumento de linha de comando:
 
-
+```
 .\build\Release\SceneViewer3D.exe assets\models\cogumelo.obj assets\models\outro.obj
+```
+
 Adicionar objetos programaticamente — edite createDemoScene() em src/main.cpp:
 
-
+```
 auto model = std::make_shared<Model>("assets/models/meu_modelo.obj");
 auto obj   = std::make_unique<Object3D>("Meu Objeto", model);
 
@@ -118,7 +132,11 @@ obj->material.color   = glm::vec3(0.8f, 0.2f, 0.2f); // vermelho
 obj->material.shininess = 64.f;
 
 scene.addObject(std::move(obj));
-🎮 Controles
+```
+
+
+## 🎮 Controles
+
 Câmera
 Tecla / Entrada	Ação
 W A S D	Mover frente / esquerda / trás / direita
