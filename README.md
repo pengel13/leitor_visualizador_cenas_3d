@@ -151,7 +151,7 @@ G	Alternar grid de chão
 H	Alternar eixos XYZ
 L	Imprimir estado da cena no console
 🏗 Estrutura do Projeto
-
+'''
 leitor_visualizador_cenas_3d/
 │
 ├── CMakeLists.txt          # Script de build
@@ -177,6 +177,8 @@ leitor_visualizador_cenas_3d/
 │
 └── assets/
     └── models/             # Modelos 3D de exemplo (.obj, .ply)
+'''
+
 📚 Referências
 Learn OpenGL — tutoriais de OpenGL moderna
 Anton's OpenGL 4 Tutorials — guia detalhado GL4
