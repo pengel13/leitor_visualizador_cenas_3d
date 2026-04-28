@@ -4,7 +4,7 @@
 
 mtllib cube.mtl
 
-# ---- Vertices ----
+# vertices
 v  0.5  0.5  0.5
 v -0.5  0.5  0.5
 v -0.5 -0.5  0.5
@@ -14,13 +14,13 @@ v -0.5  0.5 -0.5
 v -0.5 -0.5 -0.5
 v  0.5 -0.5 -0.5
 
-# ---- Texture coordinates ----
+# cordenadas das texturas
 vt 0.0 0.0
 vt 1.0 0.0
 vt 1.0 1.0
 vt 0.0 1.0
 
-# ---- Normals (one per face direction) ----
+# normais
 vn  0.0  0.0  1.0
 vn  0.0  0.0 -1.0
 vn -1.0  0.0  0.0
@@ -28,30 +28,30 @@ vn  1.0  0.0  0.0
 vn  0.0  1.0  0.0
 vn  0.0 -1.0  0.0
 
-# ---- Faces ----
+# faces
 # Format: f v/vt/vn
 
-# Front face (+Z)
+# face frontal
 usemtl Cube
 f 1/1/1 2/2/1 3/3/1
 f 1/1/1 3/3/1 4/4/1
 
-# Back face (-Z)
+# face traseira
 f 5/2/2 7/3/2 6/4/2
 f 5/2/2 8/1/2 7/3/2
 
-# Left face (-X)
+# face esquerda
 f 2/1/3 6/2/3 7/3/3
 f 2/1/3 7/3/3 3/4/3
 
-# Right face (+X)
+# face direita
 f 1/1/4 4/2/4 8/3/4
 f 1/1/4 8/3/4 5/4/4
 
-# Top face (+Y)
+# face do topo
 f 1/1/5 5/2/5 6/3/5
 f 1/1/5 6/3/5 2/4/5
 
-# Bottom face (-Y)
+# face de baixo
 f 4/1/6 3/2/6 7/3/6
 f 4/1/6 7/3/6 8/4/6
