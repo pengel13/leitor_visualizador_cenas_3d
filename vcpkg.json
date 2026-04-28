@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "scene-viewer-3d",
+  "version": "1.0.0",
+  "description": "3D Scene Viewer using Modern OpenGL",
+  "dependencies": [
+    "glad",
+    "glfw3",
+    "glm",
+    "assimp"
+  ]
+}

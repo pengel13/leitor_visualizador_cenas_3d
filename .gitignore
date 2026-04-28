@@ -1,0 +1,80 @@
+# ============================================================
+# .gitignore — 3D Scene Viewer (C++ / CMake / OpenGL)
+# ============================================================
+
+# ---- Build directories ----
+build/
+out/
+cmake-build-*/
+
+# ---- CMake generated files ----
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# ---- Compiled binaries ----
+*.exe
+*.out
+*.app
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.a
+
+# ---- Object files ----
+*.o
+*.obj.d
+
+# ---- vcpkg ----
+vcpkg_installed/
+
+# ---- IDE / editor files ----
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.opendb
+*.ncb
+*.vcxproj.user
+*.idb
+
+# ---- Windows ----
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- macOS ----
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ---- Linux ----
+*~
+.fuse_hidden*
+
+# ---- Log / crash dumps ----
+*.log
+*.dmp
+
+# ---- Shader compiler cache (some drivers write these) ----
+*.spv
+*.glslc
+
+# ---- Keep the models directory but ignore large binary assets ----
+assets/models/*.fbx
+assets/models/*.blend
+assets/models/*.max
+assets/models/*.ma
+assets/models/*.mb
+# Keep .obj, .ply, .mtl, .txt (small text-based assets are fine to commit)
