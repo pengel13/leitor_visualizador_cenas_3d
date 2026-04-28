@@ -183,10 +183,10 @@ leitor_visualizador_cenas_3d/
 ```
 
 
-📚 Referências
-Learn OpenGL — tutoriais de OpenGL moderna
-Anton's OpenGL 4 Tutorials — guia detalhado GL4
-OpenGL Reference Pages — documentação oficial
-GLFW Documentation
-GLM Manual
-Assimp Documentation
+## 📚 Referências
+[Learn OpenGL — tutoriais de OpenGL moderna](https://learnopengl.com/)
+[Anton's OpenGL 4 Tutorials — guia detalhado GL4](https://antongerdelan.net/opengl/)
+[OpenGL Reference Pages — documentação oficial](https://registry.khronos.org/OpenGL-Refpages/gl4/)
+[GLFW Documentation](https://www.glfw.org/docs/latest/)
+[GLM Manual](https://glm.g-truc.net/0.9.9/api/index.html)
+[Assimp Documentation](https://assimp-docs.readthedocs.io/)
