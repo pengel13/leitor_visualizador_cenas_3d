@@ -24,19 +24,13 @@ void Objeto3D::desenhar(Shader& shader) const {
 
     glm::mat4 matModelo = obterMatrizModelo();
 
-    // transpose(inverse(modelo)) corrige normais sob escala nao-uniforme
+    // transpose(inverse(model)) corrige normais sob escala nao-uniforme
     glm::mat3 matNormal = glm::mat3(glm::transpose(glm::inverse(matModelo)));
 
     shader.definirMat4("model",        matModelo);
     shader.definirMat3("normalMatrix", matNormal);
     shader.definirBool("isSelected",   estaSelecionado);
 
-    // Determina se o modelo tem materiais proprios (carregados do .mtl).
-    // Se a primeira malha ainda tem os defaults (ka=0.1 cinza), assumimos
-    // que o modelo usa material proprio; caso contrario aplicamos o override.
-    // Estrategia simples: se o modelo tem malhas, delega para modelo->desenhar(shader)
-    // que ja faz upload de material por malha. O material de substituicao e usado
-    // apenas para primitivos (onde o Modelo tem exatamente 1 malha sem .mtl).
     modelo->desenhar(shader);
 }
 
@@ -45,20 +39,15 @@ void Objeto3D::atualizar(float deltaTempo) {
 
     CurvaBezier& curva = animacao.value();
 
-    // Avanca o parametro t da curva proporcional ao tempo decorrido
     tempoAnimacao += curva.velocidade * deltaTempo;
 
     if (curva.loop) {
-        // Reinicia ao chegar no fim, criando um loop continuo
-        if (tempoAnimacao > 1.f) {
+        if (tempoAnimacao > 1.f)
             tempoAnimacao -= 1.f;
-        }
     } else {
-        // Para ao chegar no fim da curva
         tempoAnimacao = std::min(tempoAnimacao, 1.f);
     }
 
-    // Atualiza a posicao do objeto com a posicao na curva para o t atual
     posicao = avaliarBezier(curva, tempoAnimacao);
 }
 

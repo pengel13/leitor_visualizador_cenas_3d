@@ -34,8 +34,6 @@ const Objeto3D* Cena::obterAtivo() const {
     return objetos[indiceAtivo].get();
 }
 
-// Propaga o delta de tempo para todos os objetos da cena.
-// Cada Objeto3D avanca sua animacao de Bezier (se houver) internamente.
 void Cena::atualizar(float deltaTempo) {
     for (auto& obj : objetos) {
         obj->atualizar(deltaTempo);

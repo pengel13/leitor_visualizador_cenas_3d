@@ -4,8 +4,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 
-// Evita dependencia de _USE_MATH_DEFINES no MSVC
-static constexpr float PI = 3.14159265358979323846f;
+static constexpr float PI = 3.14159265358979323846f; // evita _USE_MATH_DEFINES no MSVC
 
 Malha Primitivos::criarCubo(float t) {
     float h = t * 0.5f;

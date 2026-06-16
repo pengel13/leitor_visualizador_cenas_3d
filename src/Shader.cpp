@@ -109,7 +109,6 @@ void Shader::definirVec4(const std::string& n, const glm::vec4& v) const {
 }
 
 void Shader::definirMat3(const std::string& n, const glm::mat3& m) const {
-    // GL_FALSE: nao transpor — GLM usa coluna-maior, igual ao OpenGL
     glUniformMatrix3fv(obterLocalizacaoUniform(n), 1, GL_FALSE, glm::value_ptr(m));
 }
 

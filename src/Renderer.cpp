@@ -32,7 +32,6 @@ void Renderizador::construirGrade(int metadeExtensao, int passo) {
     std::vector<float> verts;
     verts.reserve(static_cast<size_t>(((metadeExtensao / passo) * 4 + 4) * 6 * 2));
 
-    // Cada linha e definida por dois vertices, cada um com posicao(xyz) + cor(rgb)
     auto adicionarLinha = [&](float x0, float y0, float z0,
                                float x1, float y1, float z1,
                                float r,  float g,  float b) {
@@ -43,14 +42,12 @@ void Renderizador::construirGrade(int metadeExtensao, int passo) {
     const float claro = 0.5f;
     const float e     = static_cast<float>(metadeExtensao);
 
-    // Linhas paralelas ao eixo X (variando em Z)
     for (int z = -metadeExtensao; z <= metadeExtensao; z += passo) {
         float fz  = static_cast<float>(z);
         float col = (z == 0) ? claro : cinza;
         adicionarLinha(-e, 0.f, fz,  e, 0.f, fz,  col, col, col);
     }
 
-    // Linhas paralelas ao eixo Z (variando em X)
     for (int x = -metadeExtensao; x <= metadeExtensao; x += passo) {
         float fx  = static_cast<float>(x);
         float col = (x == 0) ? claro : cinza;
@@ -68,12 +65,11 @@ void Renderizador::construirGrade(int metadeExtensao, int passo) {
                  static_cast<GLsizeiptr>(verts.size() * sizeof(float)),
                  verts.data(), GL_STATIC_DRAW);
 
-    // location 0: posicao (vec3)
+    // location 0: posicao, 1: cor
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
                           6 * sizeof(float), reinterpret_cast<void*>(0));
 
-    // location 1: cor (vec3)
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE,
                           6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
@@ -82,7 +78,7 @@ void Renderizador::construirGrade(int metadeExtensao, int passo) {
 }
 
 void Renderizador::construirEixos(float comprimento) {
-    // Cada eixo e uma linha colorida: X=vermelho, Y=verde, Z=azul
+    // X=vermelho, Y=verde, Z=azul
     std::vector<float> verts = {
         -comprimento, 0.f, 0.f,    1.f, 0.2f, 0.2f,
          comprimento, 0.f, 0.f,    1.f, 0.2f, 0.2f,
@@ -122,9 +118,6 @@ void Renderizador::renderizar(const Cena& cena, const Camera& camera) {
     glm::mat4 matProjecao = camera.obterMatrizProjecao();
     glm::vec3 posCamera   = camera.posicao;
 
-    // ---- Passo 1: Iluminacao Phong com materiais e texturas por malha ----
-    // O material e a textura sao enviados por Malha::desenhar(shader),
-    // entao nao ha aplicarMaterial() aqui — cada malha cuida do proprio upload.
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     shaderPhong->usar();
     shaderPhong->definirMat4("view",       matVisao);
@@ -136,10 +129,6 @@ void Renderizador::renderizar(const Cena& cena, const Camera& camera) {
         obj->desenhar(*shaderPhong);
     }
 
-    // ---- Passo 2 (opcional): Overlay wireframe ----
-    // Usa o shader sem iluminacao e GL_LINE para sobrepor arestas.
-    // Chama desenhar() sem shader (geometria pura) para evitar contaminar
-    // os uniforms de material com dados do wireframe.
     if (wireframeAtivado) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glEnable(GL_POLYGON_OFFSET_LINE);
@@ -149,8 +138,7 @@ void Renderizador::renderizar(const Cena& cena, const Camera& camera) {
         shaderSemLuz->definirMat4("view",           matVisao);
         shaderSemLuz->definirMat4("projection",     matProjecao);
         shaderSemLuz->definirVec3("color",          glm::vec3(0.95f, 0.95f, 0.95f));
-        // O VAO da Malha armazena normais no atributo 1, nao cores;
-        // useVertexColor=false instrui o shader a usar a cor uniforme.
+        // attrib 1 da Malha e normal, nao cor — useVertexColor=false usa cor uniforme
         shaderSemLuz->definirBool("useVertexColor", false);
 
         for (const auto& obj : cena.objetos) {
@@ -164,7 +152,6 @@ void Renderizador::renderizar(const Cena& cena, const Camera& camera) {
 
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // ---- Passo 3 (opcional): Grade e eixos de coordenadas ----
     if (mostrarGrade) desenharGrade(camera);
     if (mostrarEixos) desenharEixos(camera);
 }
@@ -197,8 +184,6 @@ void Renderizador::desenharEixos(const Camera& camera) const {
     glLineWidth(1.f);
 }
 
-// Faz upload de todos os uniforms da luz pontual para o shader Phong.
-// Chamada uma vez por frame, antes do loop de objetos.
 void Renderizador::aplicarLuz(Shader& sh, const LuzPontual& luz) const {
     sh.definirVec3 ("light_position",  luz.posicao);
     sh.definirVec3 ("light_ambient",   luz.ambiente);

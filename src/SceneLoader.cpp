@@ -14,21 +14,17 @@
 
 using json = nlohmann::json;
 
-// Funcoes auxiliares para ler tipos GLM do JSON -----------------------------
-
-// Le um vec3 de um array JSON [x, y, z]; retorna padrao se o campo estiver ausente
+// Le vec3 de array JSON [x,y,z]; retorna padrao se ausente
 static glm::vec3 lerVec3(const json& j, const std::string& chave, glm::vec3 padrao = glm::vec3(0.f)) {
     if (!j.contains(chave)) return padrao;
     const auto& v = j[chave];
     return { v[0].get<float>(), v[1].get<float>(), v[2].get<float>() };
 }
 
-// Le um float de um JSON; retorna padrao se ausente
+// Le float do JSON; retorna padrao se ausente
 static float lerFloat(const json& j, const std::string& chave, float padrao) {
     return j.contains(chave) ? j[chave].get<float>() : padrao;
 }
-
-// ---------------------------------------------------------------------------
 
 void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
     std::cout << "[SceneLoader] Carregando cena: " << caminho << "\n";
@@ -45,7 +41,6 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
         throw std::runtime_error(std::string("[SceneLoader] Erro no JSON: ") + e.what());
     }
 
-    // ---- Camera ----
     if (j.contains("camera")) {
         const auto& jc = j["camera"];
         camera.posicao        = lerVec3(jc, "posicao", camera.posicao);
@@ -58,7 +53,6 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
         std::cout << "[SceneLoader] Camera configurada.\n";
     }
 
-    // ---- Luz pontual ----
     if (j.contains("luz")) {
         const auto& jl = j["luz"];
         cena.luz.posicao    = lerVec3(jl, "posicao",   cena.luz.posicao);
@@ -71,7 +65,6 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
         std::cout << "[SceneLoader] Luz configurada.\n";
     }
 
-    // ---- Objetos ----
     if (!j.contains("objetos") || !j["objetos"].is_array()) {
         std::cerr << "[SceneLoader] Aviso: nenhum array 'objetos' encontrado.\n";
         return;
@@ -83,7 +76,6 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
 
         std::shared_ptr<Modelo> modelo;
 
-        // ---- Determina a origem do modelo: arquivo ou primitivo ----
         if (jo.contains("arquivo")) {
             std::string arquivoModelo = jo["arquivo"].get<std::string>();
             try {
@@ -120,17 +112,13 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
 
         auto obj = std::make_unique<Objeto3D>(nome, modelo);
 
-        // ---- Transform inicial ----
         obj->posicao = lerVec3(jo, "posicao", glm::vec3(0.f));
         obj->rotacao = lerVec3(jo, "rotacao", glm::vec3(0.f));
         obj->escala  = lerVec3(jo, "escala",  glm::vec3(1.f));
 
-        // ---- Material de substituicao (opcional) ----
-        // Usado para primitivos ou para sobrepor o material do .mtl
         if (jo.contains("material")) {
             const auto& jm = jo["material"];
 
-            // A cor de substituicao e aplicada a todas as malhas do modelo
             glm::vec3 cor = lerVec3(jm, "cor", glm::vec3(0.8f));
             for (auto& malha : obj->modelo->malhas) {
                 if (jm.contains("cor"))       malha.material.cor       = cor;
@@ -141,7 +129,6 @@ void carregarCena(const std::string& caminho, Cena& cena, Camera& camera) {
             }
         }
 
-        // ---- Animacao de Bezier (opcional) ----
         if (jo.contains("animacao")) {
             const auto& ja = jo["animacao"];
             if (ja.contains("tipo") && ja["tipo"].get<std::string>() == "bezier") {
