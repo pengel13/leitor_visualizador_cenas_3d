@@ -1,7 +1,6 @@
 #include "Scene.h"
 
 #include <iostream>
-#include <algorithm>
 
 void Cena::adicionarObjeto(std::unique_ptr<Objeto3D> obj) {
     objetos.push_back(std::move(obj));
@@ -33,6 +32,14 @@ Objeto3D* Cena::obterAtivo() {
 const Objeto3D* Cena::obterAtivo() const {
     if (objetos.empty()) return nullptr;
     return objetos[indiceAtivo].get();
+}
+
+// Propaga o delta de tempo para todos os objetos da cena.
+// Cada Objeto3D avanca sua animacao de Bezier (se houver) internamente.
+void Cena::atualizar(float deltaTempo) {
+    for (auto& obj : objetos) {
+        obj->atualizar(deltaTempo);
+    }
 }
 
 void Cena::imprimirStatus() const {

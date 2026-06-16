@@ -39,6 +39,12 @@ find_package(glm     CONFIG REQUIRED)
 # Assimp — 3D model import library (.obj, .ply, .fbx, .gltf, …)
 find_package(assimp  CONFIG REQUIRED)
 
+# nlohmann/json — header-only JSON parser (scene config)
+find_package(nlohmann_json CONFIG REQUIRED)
+
+# stb — header-only image loader (stb_image for diffuse textures)
+find_package(Stb REQUIRED)
+
 # ============================================================
 # Source files
 # ============================================================
@@ -52,6 +58,9 @@ set(SOURCES
     src/Scene.cpp
     src/Renderer.cpp
     src/Primitives.cpp
+    src/Texture.cpp
+    src/Curva.cpp
+    src/SceneLoader.cpp
 )
 
 # ============================================================
@@ -60,7 +69,7 @@ set(SOURCES
 add_executable(SceneViewer3D ${SOURCES})
 
 # Include our own src/ directory so headers can be included without paths
-target_include_directories(SceneViewer3D PRIVATE src)
+target_include_directories(SceneViewer3D PRIVATE src ${Stb_INCLUDE_DIR})
 
 # ============================================================
 # Link libraries
@@ -70,6 +79,8 @@ target_link_libraries(SceneViewer3D PRIVATE
     glfw                # windowing + input
     glm::glm            # math (header-only, but CMake target handles includes)
     assimp::assimp      # 3D model loading
+    nlohmann_json::nlohmann_json  # JSON scene config parsing
+    # stb is header-only; no link target needed, just the include dir above
 )
 
 # On some Linux systems you also need to link against OpenGL explicitly
@@ -114,6 +125,14 @@ add_custom_command(TARGET SceneViewer3D POST_BUILD
         "${CMAKE_SOURCE_DIR}/assets"
         "$<TARGET_FILE_DIR:SceneViewer3D>/assets"
     COMMENT "Copying assets to output directory"
+)
+
+# Copy scene.json (scene configuration file)
+add_custom_command(TARGET SceneViewer3D POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/scene.json"
+        "$<TARGET_FILE_DIR:SceneViewer3D>/scene.json"
+    COMMENT "Copying scene.json to output directory"
 )
 
 # ============================================================

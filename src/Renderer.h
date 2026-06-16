@@ -6,6 +6,10 @@
 #include "Camera.h"
 #include "Shader.h"
 
+// Renderizador centraliza todos os passes de renderizacao:
+//   1. Passo Phong: iluminacao com materiais e texturas por malha
+//   2. Passo wireframe (opcional): overlay de arestas sobre os objetos
+//   3. Grade e eixos de coordenadas (opcionais, para navegacao)
 class Renderizador {
 public:
     bool wireframeAtivado = false;
@@ -20,7 +24,10 @@ public:
     Renderizador(const Renderizador&)            = delete;
     Renderizador& operator=(const Renderizador&) = delete;
 
+    // Inicializa shaders, constroi grade e eixos, habilita depth test
     void inicializar();
+
+    // Executa todos os passes de renderizacao para um frame
     void renderizar(const Cena& cena, const Camera& camera);
 
 private:
@@ -35,12 +42,15 @@ private:
     GLuint eixosVBO          = 0;
     int    contadorVertEixos = 0;
 
+    // Gera a geometria da grade no plano XZ
     void construirGrade(int metadeExtensao, int passo);
+
+    // Gera os tres eixos de coordenadas coloridos (X=vermelho, Y=verde, Z=azul)
     void construirEixos(float comprimento);
 
     void desenharGrade(const Camera& camera) const;
     void desenharEixos(const Camera& camera) const;
 
-    void aplicarMaterial(Shader& sh, const Material&   mat) const;
-    void aplicarLuz     (Shader& sh, const LuzPontual& luz) const;
+    // Faz upload das propriedades da luz pontual para o shader
+    void aplicarLuz(Shader& sh, const LuzPontual& luz) const;
 };
